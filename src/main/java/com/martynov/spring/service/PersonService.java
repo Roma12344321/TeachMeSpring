@@ -1,12 +1,15 @@
 package com.martynov.spring.service;
 
+import com.martynov.spring.models.Ability;
 import com.martynov.spring.models.Person;
 import com.martynov.spring.repositories.PersonRepository;
 import com.martynov.spring.security.PersonDetails;
 import com.martynov.spring.util.PersonNotFoundException;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -24,7 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -35,6 +38,7 @@ public class PersonService {
     private String IMAGE_DIR;
 
     private final PersonRepository personRepository;
+    private final EntityManager entityManager;
 
     public Person getCurrentPerson() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -44,7 +48,7 @@ public class PersonService {
 
     @Transactional
     public void uploadPhoto(MultipartFile imageFile) {
-        Person person = this.getCurrentPerson();
+        Person person = getCurrentPerson();
         if (!imageFile.isEmpty()) {
             try {
                 String uploadDir = IMAGE_DIR;
@@ -60,6 +64,7 @@ public class PersonService {
         }
         personRepository.save(person);
     }
+
     @Transactional(readOnly = true)
     public ResponseEntity<Resource> getCurrentPersonImage() {
         Person person = getCurrentPerson();
@@ -95,4 +100,35 @@ public class PersonService {
         return ResponseEntity.notFound().build();
     }
 
+    @Transactional(readOnly = true)
+    public Set<Person> getPersonListWithRecommendation(int page, int count) {
+        Person currentPerson = getCurrentPerson();
+        Session session = entityManager.unwrap(Session.class);
+        List<Ability> abilities = session.createQuery(
+                        "select a from Ability a left join fetch a.skill where a.person.id=:personId",
+                        Ability.class)
+                .setParameter("personId", currentPerson.getId())
+                .getResultList();
+        List<Person> personList = session.createQuery(
+                "select p from Person p where size(p.abilities) > 0 and p.id != :personId",
+                        Person.class)
+                .setParameter("personId", currentPerson.getId())
+                .setFirstResult(page * count)
+                .setMaxResults(count)
+                .getResultList();
+        for (Ability ability : abilities) {
+            for (Person person : personList) {
+                for (Ability ability1 : person.getAbilities()) {
+                    if (((ability.getIsItMy() && !ability1.getIsItMy()) || (!ability.getIsItMy() && ability1.getIsItMy())) &&
+                            ability.getSkill().getName().equalsIgnoreCase(ability1.getSkill().getName())) {
+                        int sameness = person.getSameness() + 1;
+                        person.setSameness(sameness);
+                    }
+                }
+            }
+        }
+        Set<Person> personSet = new TreeSet<>((o1, o2) -> o2.getSameness() - o1.getSameness());
+        personSet.addAll(personList);
+        return personSet;
+    }
 }

@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
+import java.util.List;
 
 @NoArgsConstructor
 @Data
@@ -36,5 +37,8 @@ public class PersonDto {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     @JsonFormat(pattern="yyyy-MM-dd")
     private Date date;
+
+    private List<AbilityDto> abilities;
+    private int sameness;
 
 }
