@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -104,18 +105,19 @@ public class PersonService {
     public Set<Person> getPersonListWithRecommendation(int page, int count) {
         Person currentPerson = getCurrentPerson();
         Session session = entityManager.unwrap(Session.class);
+
         List<Ability> abilities = session.createQuery(
                         "select a from Ability a left join fetch a.skill where a.person.id=:personId",
                         Ability.class)
                 .setParameter("personId", currentPerson.getId())
                 .getResultList();
+
         List<Person> personList = session.createQuery(
-                "select p from Person p where size(p.abilities) > 0 and p.id != :personId",
+                "select p from Person p left join fetch p.abilities a left join fetch a.skill s where size(p.abilities) > 0 and p.id != :personId",
                         Person.class)
                 .setParameter("personId", currentPerson.getId())
-                .setFirstResult(page * count)
-                .setMaxResults(count)
                 .getResultList();
+
         for (Ability ability : abilities) {
             for (Person person : personList) {
                 for (Ability ability1 : person.getAbilities()) {
@@ -127,8 +129,15 @@ public class PersonService {
                 }
             }
         }
+
         Set<Person> personSet = new TreeSet<>((o1, o2) -> o2.getSameness() - o1.getSameness());
         personSet.addAll(personList);
-        return personSet;
+        if (page * count > personSet.size()) {
+            return Collections.emptySet();
+        }
+        return personSet.stream()
+                .skip((long) page * count)
+                .limit(count)
+                .collect(Collectors.toCollection(() -> new TreeSet<>(Comparator.comparingInt(Person::getSameness).reversed())));
     }
 }
