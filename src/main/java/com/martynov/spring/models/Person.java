@@ -63,6 +63,12 @@ public class Person {
     @Transient
     private int sameness;
 
+    @ManyToMany(mappedBy = "people")
+    private List<ChatGroup> chatGroups;
+
+    @OneToMany(mappedBy = "person")
+    private List<Message> messages;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

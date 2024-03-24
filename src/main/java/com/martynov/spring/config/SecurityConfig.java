@@ -57,23 +57,23 @@ public class SecurityConfig {
         return http.build();
     }
 
-//    @Bean
-//    public SecurityFilterChain webFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
-//        http
-//                .authenticationManager(authenticationManager)
-//                .authorizeHttpRequests((auth) -> auth
-//                        .requestMatchers("/css/**", "/js/**", "/img/**", "/webjars/**").permitAll()
-//                        .requestMatchers("/auth/login", "/auth/registration","/").permitAll()
-//                        .requestMatchers("/admin/**").hasRole("ADMIN")
-//                        .anyRequest().hasAnyRole("USER", "ADMIN"));
-//        http.formLogin((form) -> form
-//                .loginPage("/auth/login")
-//                .loginProcessingUrl("/process_login")
-//                .defaultSuccessUrl("/", true)
-//                .failureUrl("/auth/login?error"));
-//        http.logout((logout) -> logout
-//                .logoutUrl("/logout")
-//                .logoutSuccessUrl("/"));
-//        return http.build();
-//    }
+    @Bean
+    public SecurityFilterChain webFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
+        http
+                .authenticationManager(authenticationManager)
+                .authorizeHttpRequests((auth) -> auth
+                        .requestMatchers("/css/**", "/js/**", "/img/**", "/webjars/**").permitAll()
+                        .requestMatchers("/auth/login", "/auth/registration").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .anyRequest().hasAnyRole("USER", "ADMIN"));
+        http.formLogin((form) -> form
+                .loginPage("/auth/login")
+                .loginProcessingUrl("/process_login")
+                .defaultSuccessUrl("/", true)
+                .failureUrl("/auth/login?error"));
+        http.logout((logout) -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/"));
+        return http.build();
+    }
 }

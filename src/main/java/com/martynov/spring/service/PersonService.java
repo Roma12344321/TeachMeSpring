@@ -7,7 +7,6 @@ import com.martynov.spring.security.PersonDetails;
 import com.martynov.spring.util.PersonNotFoundException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
@@ -113,7 +112,7 @@ public class PersonService {
                 .getResultList();
 
         List<Person> personList = session.createQuery(
-                "select p from Person p left join fetch p.abilities a left join fetch a.skill s where size(p.abilities) > 0 and p.id != :personId",
+                        "select p from Person p left join fetch p.abilities a left join fetch a.skill s where size(p.abilities) > 0 and p.id != :personId",
                         Person.class)
                 .setParameter("personId", currentPerson.getId())
                 .getResultList();
@@ -139,5 +138,20 @@ public class PersonService {
                 .skip((long) page * count)
                 .limit(count)
                 .collect(Collectors.toCollection(() -> new TreeSet<>(Comparator.comparingInt(Person::getSameness).reversed())));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Person> getAllPerson(int page, int count) {
+        Person currentPerson = getCurrentPerson();
+        Session session = entityManager.unwrap(Session.class);
+        return session.createQuery("select p from Person p where p.id!=:personId", Person.class)
+                .setParameter("personId", currentPerson.getId())
+                .setFirstResult(page * count)
+                .setMaxResults(count)
+                .getResultList();
+    }
+    @Transactional(readOnly = true)
+    public Person findById(int id) {
+        return personRepository.findById(id).orElseThrow();
     }
 }
